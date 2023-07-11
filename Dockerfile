@@ -16,7 +16,6 @@ FROM alpine
 
 RUN apk --no-cache --update add ca-certificates curl
 WORKDIR /app
-COPY static static
 COPY --from=go-build /src/main /app/
-EXPOSE 8080
+EXPOSE 1323
 ENTRYPOINT ./main
