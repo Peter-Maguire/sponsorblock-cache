@@ -17,8 +17,8 @@ func main() {
 		return func(c echo.Context) error {
 			fmt.Printf("[%s] %s\n", c.Request().Method, c.Request().URL)
 			c.Response().Header().Set("access-control-allow-origin", "*")
-			c.Response().Header().Set("access-control-allow-methods", "GET, POST, DELETE")
-			c.Response().Header().Set("access-control-allow-headers", "Content-Type")
+			c.Response().Header().Set("access-control-allow-methods", "GET, POST, OPTIONS, DELETE")
+			c.Response().Header().Set("access-control-allow-headers", "Content-Type, If-None-Match, x-client-name")
 			c.Response().Header().Set("access-control-max-age", "86400")
 			return next(c)
 		}
