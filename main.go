@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/patrickmn/go-cache"
@@ -9,9 +10,16 @@ import (
 	"time"
 )
 
+var client *http.Client
+
 func main() {
 	hashCache := cache.New(30*time.Minute, 60*time.Minute)
 	e := echo.New()
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = &http.Client{Transport: tr}
 
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -42,8 +50,10 @@ func main() {
 			return err
 		}
 
-		fmt.Println("Caching response for hash", hash)
-		hashCache.Set(hash, b, 30*time.Minute)
+		go func() {
+			fmt.Println("Caching response for hash", hash)
+			hashCache.Set(hash, b, 30*time.Minute)
+		}()
 		return c.JSONBlob(200, b)
 	})
 
@@ -64,8 +74,10 @@ func main() {
 			return err
 		}
 
-		fmt.Println("Caching response for hash", video)
-		hashCache.Set(video, b, 30*time.Minute)
+		go func() {
+			fmt.Println("Caching response for hash", video)
+			hashCache.Set(video, b, 30*time.Minute)
+		}()
 		return c.JSONBlob(200, b)
 	})
 
@@ -149,7 +161,7 @@ func getSponsorBlockResponse(method string, url string, body io.Reader, header h
 	if err != nil {
 		return nil, err
 	}
-	res, err := http.DefaultClient.Do(newRequest)
+	res, err := client.Do(newRequest)
 	if err != nil {
 		return nil, err
 	}
