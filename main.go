@@ -31,6 +31,8 @@ func main() {
 			c.Response().Header().Set("access-control-allow-headers", "Content-Type, If-None-Match, x-client-name")
 			c.Response().Header().Set("access-control-max-age", "86400")
 			if c.Request().Method == "GET" {
+				c.Response().Header().Set("cache-control", "max-age=300")
+			} else if c.Request().Method == "OPTIONS" {
 				c.Response().Header().Set("cache-control", "max-age=604800")
 			}
 			return next(c)
