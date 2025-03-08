@@ -75,7 +75,6 @@ func main() {
 		result, exists := hashCache.Get(hash)
 
 		if exists {
-			fmt.Println("Cache HIT!")
 			return c.JSONBlob(200, result.([]byte))
 		}
 
@@ -86,9 +85,10 @@ func main() {
 			fmt.Println(err)
 			return err
 		}
-
-		fmt.Println("Caching response for hash", hash)
-		hashCache.Set(hash, b, 30*time.Minute)
+		go func() {
+			fmt.Println("Caching response for hash", hash)
+			hashCache.Set(hash, b, 30*time.Minute)
+		}()
 		return c.JSONBlob(200, b)
 	})
 
@@ -108,10 +108,11 @@ func main() {
 			fmt.Println(err)
 			return err
 		}
-
-		fmt.Println("Caching response for hash", id)
-		// TODO: This should cache for longer for older videos, or maybe not cache at all?
-		hashCache.Set(id, b, 5*time.Minute)
+		go func() {
+			fmt.Println("Caching response for hash", id)
+			// TODO: This should cache for longer for older videos, or maybe not cache at all?
+			hashCache.Set(id, b, 5*time.Minute)
+		}()
 		return c.JSONBlob(200, b)
 	})
 
@@ -120,7 +121,7 @@ func main() {
 		return c.NoContent(204)
 	})
 
-	e.Any("*", func(c echo.Context) error {
+	e.Match([]string{"GET", "HEAD", "DELETE", "PUT", "POST", "PATCH"}, "*", func(c echo.Context) error {
 		req := c.Request()
 
 		b, err := getSponsorBlockResponse(req.Method, req.URL.String(), req.Body, req.Header)
@@ -129,8 +130,6 @@ func main() {
 			fmt.Println(err)
 			return err
 		}
-
-		fmt.Println("Response", string(b))
 
 		return c.JSONBlob(200, b)
 	})
@@ -159,7 +158,5 @@ func getSponsorBlockResponse(method string, url string, body io.Reader, header h
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("Response", string(b))
 	return b, nil
 }
