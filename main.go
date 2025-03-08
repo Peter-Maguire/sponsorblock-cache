@@ -3,8 +3,10 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"github.com/bytedance/sonic"
 	"github.com/labstack/echo/v4"
 	"github.com/patrickmn/go-cache"
+	"github.com/peter-maguire/sponsorblock-cache/entity"
 	"io"
 	"net/http"
 	"time"
@@ -24,10 +26,14 @@ func main() {
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			fmt.Printf("[%s] %s\n", c.Request().Method, c.Request().URL)
-			c.Response().Header().Set("access-control-allow-origin", "*")
-			c.Response().Header().Set("access-control-allow-methods", "GET, POST, OPTIONS, DELETE")
-			c.Response().Header().Set("access-control-allow-headers", "Content-Type, If-None-Match, x-client-name")
-			c.Response().Header().Set("access-control-max-age", "86400")
+			if c.Request().Method == "OPTIONS" {
+				c.Response().Header().Set("access-control-allow-origin", "*")
+				c.Response().Header().Set("access-control-allow-methods", "GET, POST, OPTIONS, DELETE")
+				c.Response().Header().Set("access-control-allow-headers", "Content-Type, If-None-Match, x-client-name")
+				c.Response().Header().Set("access-control-max-age", "86400")
+			} else if c.Request().Method == "GET" {
+				c.Response().Header().Set("cache-control", "max-age=604800")
+			}
 			return next(c)
 		}
 	})
@@ -50,11 +56,20 @@ func main() {
 			return err
 		}
 
+		var videoBranding = make(map[string]entity.VideoBranding)
+		err = sonic.Unmarshal(b, &videoBranding)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		fixedOutput, err := sonic.Marshal(videoBranding)
+
 		go func() {
 			fmt.Println("Caching response for hash", hash)
-			hashCache.Set(hash, b, 30*time.Minute)
+			hashCache.Set(hash, fixedOutput, 30*time.Minute)
 		}()
-		return c.JSONBlob(200, b)
+		return c.JSONBlob(200, fixedOutput)
 	})
 
 	e.GET("/api/branding", func(c echo.Context) error {
